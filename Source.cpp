@@ -18,6 +18,8 @@ int main()
 	int muonCount = 0;			// Temporary variable tor store muon value at each point of time.
 	std::tm dateTime;
 	time_t epochTime;
+
+	double muonThreshold = 500;		// Threshold above which a peak should be identified.
 	
 	// Constructor of a vector to store the muon intensity values.
 	std::vector<int> muonIntensityAll;		// Vectore to store Muon Values
@@ -25,17 +27,18 @@ int main()
 	std::vector<float> muonDerivative;		// Vector to store Derivativs for Muon Intensity measurements.
 
 	// Create an instance for ifstream to read from file.
-	std::ifstream subtitleFile("Muon_Test.txt");
+	std::ifstream muonDataFile("MuonDetector_Oct20-21.csv");
+//	std::ifstream muonDataFile("Muon_Test.txt");
 	// Create an instance for ofstream to write to file.
 	std::ofstream outputFile("Muon_Peaks.txt", std::ofstream::trunc);
 
 	// Read the first line of the file which is not needed.
-	std::getline(subtitleFile, line);
+	std::getline(muonDataFile, line);
 
+	std::cout << "Extracting Muon Flux Intensity Values from the file..." << std::endl;
 	// Run on the file reading line by line.
-	// Extract the Muon flux intensity values
-	// and calculate derivativs at each point in time.
-	while (std::getline(subtitleFile, line))
+	// Extract the Muon flux intensity values.
+	while (std::getline(muonDataFile, line))
 	{
 		// Extract the Muon flux intensity values from the file.
 		size_t commaPlace = line.find(",");
@@ -56,7 +59,7 @@ int main()
 			std::cin.get();
 
 			// CLose the files at the end;
-			subtitleFile.close();
+			muonDataFile.close();
 			outputFile.close();
 
 			return 0;
@@ -66,7 +69,7 @@ int main()
 		valueTime.push_back(std::mktime(&dateTime));
 		
 		// Convert string to number.
-		muonCount = stoi(line.substr(commaPlace + 1));
+		muonCount = stoi(line.substr(commaPlace + 2));
 
 		muonIntensityAll.push_back(muonCount);
 		
@@ -89,26 +92,54 @@ int main()
 		std::cin.get();
 
 		// CLose the files at the end;
-		subtitleFile.close();
+		muonDataFile.close();
 		outputFile.close();
 
 		return 0;
 	}
 
+	std::cout << std::endl << "Calculating derivatives for each point in time..." << std::endl;
+	
 	// Calculate derivatives for each point in time.
+	muonDerivative.push_back(0);
 	for (int i = 1; i <= (valueTime.size()-1); i++)
 	{
-		std::cout << EpochToCalendar(valueTime[i]) << "\t" << (muonIntensityAll[i] - muonIntensityAll[i - 1]) / (valueTime[i] - valueTime[i - 1]) << std::endl;
-
 		muonDerivative.push_back((muonIntensityAll[i] - muonIntensityAll[i - 1]) / (valueTime[i] - valueTime[i - 1]));
 	}
+
+	// Shrink vectors to fit the values.
+	muonIntensityAll.shrink_to_fit();
+	valueTime.shrink_to_fit();
+	muonDerivative.shrink_to_fit();
+
+	std::cout << "Done." << std::endl;
+
+	std::cout << valueTime.size() << std::endl;
+	std::cout << muonIntensityAll.size() << std::endl;
+	std::cout << muonDerivative.size() << std::endl;
+
+	std::cout << "Press any key to start writing data to disk." << std::endl;
+	std::cin.get();
+	std::cout << std::endl << "Applying Threshold." << std::endl;
+	std::cout << "Writing data to disk..." << std::endl;
+	for (int i = 0; i <= (valueTime.size() - 2); i++)
+	{
+		if (muonDerivative[i] >= muonThreshold)
+		{
+			std::cout << EpochToCalendar(valueTime[i]) << ", " << muonDerivative[i] << "\t" << muonIntensityAll[i] << std::endl;
+			outputFile << EpochToCalendar(valueTime[i]) << ", " << muonDerivative[i] << "\t" << muonIntensityAll[i] << std::endl;
+		}
+	}
+
+	std::cout << "All data is written to file 'Muon_Peaks.txt'." << std::endl;
+	std::cout << "Press any key to exit..." << std::endl;
 
 
 	// Prevent the console screen from closing at the end.
 	std::cin.get();
 
 	// CLose the files at the end;
-	subtitleFile.close();
+	muonDataFile.close();
 	outputFile.close();
 
 
